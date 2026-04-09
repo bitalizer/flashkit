@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "setuptools-scm>=8.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "flashkit"
+name = "pyflashkit"
 version = "1.0.0"
 description = "SWF/ABC toolkit for parsing, analyzing, and manipulating Flash files and AVM2 bytecode"
 readme = "README.md"

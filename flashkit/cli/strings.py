@@ -1,0 +1,58 @@
+"""``flashkit strings`` — list or search string constants."""
+
+from __future__ import annotations
+
+import argparse
+
+from ._util import load, bold, dim, green
+
+
+def register(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser("strings", help="List or search strings")
+    p.add_argument("file", help="SWF or SWZ file")
+    p.add_argument("-s", "--search", help="Search term")
+    p.add_argument("-r", "--regex", action="store_true",
+                   help="Treat search term as regex")
+    p.add_argument("-c", "--classify", action="store_true",
+                   help="Classify strings (URLs, debug markers)")
+    p.add_argument("-v", "--verbose", action="store_true",
+                   help="Show usage locations")
+    p.set_defaults(func=run)
+
+
+def run(args: argparse.Namespace) -> None:
+    ws = load(args.file)
+
+    from ..analysis.strings import StringIndex
+    idx = StringIndex.from_workspace(ws)
+
+    if args.search:
+        matches = idx.search(args.search, regex=args.regex)
+        if not matches:
+            print("No matching strings.")
+            return
+
+        for s in matches:
+            print(f"  {green(repr(s))}")
+            if args.verbose:
+                for u in idx.by_string.get(s, []):
+                    print(f"    used in {dim(u.class_name)}.{u.method_name}")
+        print(f"\n{len(matches)} unique string(s)")
+    else:
+        all_strings = sorted(idx.pool_strings)
+        if args.classify:
+            urls = idx.url_strings()
+            files = idx.debug_markers()
+            print(bold("URLs:"))
+            for s in urls:
+                print(f"  {s}")
+            print(f"\n{bold('Debug markers:')}")
+            for s in files:
+                print(f"  {s}")
+            print(f"\n{len(urls)} URL(s), {len(files)} debug marker(s), "
+                  f"{len(all_strings)} total strings")
+        else:
+            for s in all_strings:
+                if s:
+                    print(f"  {s}")
+            print(f"\n{len(all_strings)} string(s)")

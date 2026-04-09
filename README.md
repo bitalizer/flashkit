@@ -5,6 +5,14 @@ Parse, analyze, and manipulate Adobe Flash SWF files and AVM2 bytecode.
 ## Install
 
 ```bash
+pip install pyflashkit
+```
+
+Or from source:
+
+```bash
+git clone https://github.com/bitalizer/pyflashkit.git
+cd pyflashkit
 pip install -e .
 ```
 

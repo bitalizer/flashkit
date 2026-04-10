@@ -136,6 +136,15 @@ flashkit callees app.swf PlayerManager.init
 flashkit refs app.swf Point
 ```
 
+### `flashkit fields`
+
+```bash
+flashkit fields app.swf PlayerManager              # field access summary (R/W counts)
+flashkit fields app.swf PlayerManager -c            # constructor assignments in order
+flashkit fields app.swf PlayerManager -f mHealth    # who reads/writes a specific field
+flashkit fields app.swf PlayerManager -m takeDamage # what fields a method accesses
+```
+
 ### `flashkit packages` / `flashkit extract` / `flashkit build`
 
 ```bash
@@ -262,7 +271,7 @@ flashkit/
   abc/           AVM2 bytecode (parse, write, disasm, builder)
   info/          Resolved class model (ClassInfo, FieldInfo, MethodInfo)
   workspace/     File loading and class index
-  analysis/      Inheritance, call graph, references, strings
+  analysis/      Inheritance, call graph, references, strings, field access
   search/        Unified query engine
 ```
 

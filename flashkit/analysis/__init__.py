@@ -10,12 +10,15 @@ Modules:
     call_graph: CallGraph — method-to-method call edges from bytecode.
     references: ReferenceIndex — cross-references (field types, instantiations, imports).
     strings: StringIndex — string constant search and classification.
+    field_access: FieldAccessIndex — field read/write tracking from bytecode.
 """
 
 from .inheritance import InheritanceGraph
 from .call_graph import CallGraph, CallEdge
 from .references import ReferenceIndex, Reference
 from .strings import StringIndex, StringUsage
+from .field_access import FieldAccessIndex, FieldAccess
+from .unified import build_all_indexes
 
 __all__ = [
     "InheritanceGraph",
@@ -25,4 +28,7 @@ __all__ = [
     "Reference",
     "StringIndex",
     "StringUsage",
+    "FieldAccessIndex",
+    "FieldAccess",
+    "build_all_indexes",
 ]

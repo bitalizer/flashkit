@@ -12,8 +12,6 @@ Packages:
     info: Rich resolved model (ClassInfo, FieldInfo, MethodInfo).
     workspace: Loaded binary workspace (SWF/SWZ resources).
     analysis: Inheritance graph, call graph, references, strings.
-    search: Query engine for workspace content.
-
 Quick start::
 
     from flashkit import parse_swf, parse_abc, serialize_abc
@@ -23,7 +21,7 @@ Quick start::
     output = serialize_abc(abc)
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 from .errors import (
     FlashkitError, ParseError, SWFParseError,

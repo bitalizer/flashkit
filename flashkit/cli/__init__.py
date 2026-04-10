@@ -31,7 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
     from . import (
         info, tags, classes, class_cmd, strings,
         disasm, callers, callees, refs, tree,
-        packages, extract, build,
+        packages, extract, build, field_access,
     )
 
     info.register(sub)
@@ -47,6 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     packages.register(sub)
     extract.register(sub)
     build.register(sub)
+    field_access.register(sub)
 
     return parser
 

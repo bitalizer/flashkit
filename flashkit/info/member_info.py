@@ -20,12 +20,16 @@ from ..abc.constants import (
     CONSTANT_QName, CONSTANT_QNameA,
     CONSTANT_RTQName, CONSTANT_RTQNameA,
     CONSTANT_Multiname, CONSTANT_MultinameA,
+    CONSTANT_TypeName,
     ATTR_Metadata,
 )
 
 
 def resolve_multiname(abc: AbcFile, index: int) -> str:
     """Resolve a multiname pool index to a human-readable name string.
+
+    Handles parameterized types (TypeName) like ``Vector.<int>`` by
+    recursively resolving the base type and type parameters.
 
     Args:
         abc: The AbcFile containing the constant pools.
@@ -46,6 +50,19 @@ def resolve_multiname(abc: AbcFile, index: int) -> str:
     elif mn.kind in (CONSTANT_Multiname, CONSTANT_MultinameA):
         if 0 < mn.name < len(abc.string_pool):
             return abc.string_pool[mn.name]
+    elif mn.kind == CONSTANT_TypeName:
+        # TypeName: mn.ns = base type multiname index, mn.name = param count
+        # mn.data = serialized parameter multiname indices (u30 encoded)
+        base = resolve_multiname(abc, mn.ns)
+        param_count = mn.name
+        if param_count > 0 and mn.data:
+            params = []
+            offset = 0
+            for _ in range(param_count):
+                param_idx, offset = read_u30(mn.data, offset)
+                params.append(resolve_multiname(abc, param_idx))
+            return f"{base}.<{', '.join(params)}>"
+        return base
     return f"multiname[{index}]"
 
 
@@ -75,10 +92,16 @@ def resolve_multiname_full(abc: AbcFile, index: int) -> tuple[str, str]:
                      CONSTANT_Multiname, CONSTANT_MultinameA):
         if 0 < mn.name < len(abc.string_pool):
             name = abc.string_pool[mn.name]
+    elif mn.kind == CONSTANT_TypeName:
+        # Delegate to resolve_multiname for the full "Base.<T>" string;
+        # derive package from the base type multiname.
+        name = resolve_multiname(abc, index)
+        base_pkg, _ = resolve_multiname_full(abc, mn.ns)
+        package = base_pkg
     return (package, name)
 
 
-@dataclass
+@dataclass(slots=True)
 class FieldInfo:
     """A resolved field (variable or constant) on a class.
 
@@ -102,9 +125,34 @@ class FieldInfo:
     trait_index: int = 0
     multiname_index: int = 0
     type_multiname_index: int = 0
+    _owner_class: object = field(default=None, repr=False, compare=False)
+
+    @property
+    def readers(self) -> list[str]:
+        """Methods that read this field.
+
+        Returns:
+            Sorted list of method names.
+        """
+        if self._owner_class is None or self._owner_class._workspace is None:
+            return []
+        return self._owner_class._workspace.field_readers(
+            self._owner_class.qualified_name, self.name)
+
+    @property
+    def writers(self) -> list[str]:
+        """Methods that write to this field.
+
+        Returns:
+            Sorted list of method names.
+        """
+        if self._owner_class is None or self._owner_class._workspace is None:
+            return []
+        return self._owner_class._workspace.field_writers(
+            self._owner_class.qualified_name, self.name)
 
 
-@dataclass
+@dataclass(slots=True)
 class MethodInfoResolved:
     """A resolved method, getter, or setter on a class.
 
@@ -134,6 +182,31 @@ class MethodInfoResolved:
     disp_id: int = 0
     trait_index: int = 0
     multiname_index: int = 0
+    _owner_class: object = field(default=None, repr=False, compare=False)
+
+    @property
+    def fields_read(self) -> list[str]:
+        """Fields read by this method.
+
+        Returns:
+            Sorted list of field names.
+        """
+        if self._owner_class is None or self._owner_class._workspace is None:
+            return []
+        return self._owner_class._workspace.fields_read_by(
+            self._owner_class.qualified_name, self.name)
+
+    @property
+    def fields_written(self) -> list[str]:
+        """Fields written by this method.
+
+        Returns:
+            Sorted list of field names.
+        """
+        if self._owner_class is None or self._owner_class._workspace is None:
+            return []
+        return self._owner_class._workspace.fields_written_by(
+            self._owner_class.qualified_name, self.name)
 
 
 def parse_slot_trait(data: bytes) -> tuple[int, int, int, int | None]:

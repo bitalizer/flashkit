@@ -20,12 +20,16 @@ from ..abc.constants import (
     CONSTANT_QName, CONSTANT_QNameA,
     CONSTANT_RTQName, CONSTANT_RTQNameA,
     CONSTANT_Multiname, CONSTANT_MultinameA,
+    CONSTANT_TypeName,
     ATTR_Metadata,
 )
 
 
 def resolve_multiname(abc: AbcFile, index: int) -> str:
     """Resolve a multiname pool index to a human-readable name string.
+
+    Handles parameterized types (TypeName) like ``Vector.<int>`` by
+    recursively resolving the base type and type parameters.
 
     Args:
         abc: The AbcFile containing the constant pools.
@@ -46,6 +50,19 @@ def resolve_multiname(abc: AbcFile, index: int) -> str:
     elif mn.kind in (CONSTANT_Multiname, CONSTANT_MultinameA):
         if 0 < mn.name < len(abc.string_pool):
             return abc.string_pool[mn.name]
+    elif mn.kind == CONSTANT_TypeName:
+        # TypeName: mn.ns = base type multiname index, mn.name = param count
+        # mn.data = serialized parameter multiname indices (u30 encoded)
+        base = resolve_multiname(abc, mn.ns)
+        param_count = mn.name
+        if param_count > 0 and mn.data:
+            params = []
+            offset = 0
+            for _ in range(param_count):
+                param_idx, offset = read_u30(mn.data, offset)
+                params.append(resolve_multiname(abc, param_idx))
+            return f"{base}.<{', '.join(params)}>"
+        return base
     return f"multiname[{index}]"
 
 
@@ -75,6 +92,12 @@ def resolve_multiname_full(abc: AbcFile, index: int) -> tuple[str, str]:
                      CONSTANT_Multiname, CONSTANT_MultinameA):
         if 0 < mn.name < len(abc.string_pool):
             name = abc.string_pool[mn.name]
+    elif mn.kind == CONSTANT_TypeName:
+        # Delegate to resolve_multiname for the full "Base.<T>" string;
+        # derive package from the base type multiname.
+        name = resolve_multiname(abc, index)
+        base_pkg, _ = resolve_multiname_full(abc, mn.ns)
+        package = base_pkg
     return (package, name)
 
 

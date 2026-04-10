@@ -311,6 +311,25 @@ class AbcBuilder:
             kind=CONSTANT_RTQName, name=name))
         return idx
 
+    def typename(self, base: int, params: list[int]) -> int:
+        """Add a TypeName (parameterized type) multiname, e.g. Vector.<int>.
+
+        Args:
+            base: Multiname pool index for the base type (e.g. Vector).
+            params: List of multiname pool indices for type parameters.
+
+        Returns:
+            Multiname pool index.
+        """
+        param_bytes = bytearray()
+        for p in params:
+            param_bytes += write_u30(p)
+        idx = len(self._multiname_pool)
+        self._multiname_pool.append(MultinameInfo(
+            kind=CONSTANT_TypeName, ns=base, name=len(params),
+            data=bytes(param_bytes)))
+        return idx
+
     # ── Methods ────────────────────────────────────────────────────────
 
     def method(

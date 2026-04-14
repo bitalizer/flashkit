@@ -21,7 +21,7 @@ Quick start::
     output = serialize_abc(abc)
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 from .errors import (
     FlashkitError, ParseError, SWFParseError,
@@ -32,6 +32,8 @@ from .swf.builder import rebuild_swf, make_doabc2_tag
 from .abc.parser import parse_abc
 from .abc.writer import serialize_abc
 from .abc.types import AbcFile
+from .workspace.workspace import Workspace
+from .info.class_info import ClassInfo
 
 __all__ = [
     "__version__",
@@ -49,4 +51,6 @@ __all__ = [
     "parse_abc",
     "serialize_abc",
     "AbcFile",
+    "Workspace",
+    "ClassInfo",
 ]

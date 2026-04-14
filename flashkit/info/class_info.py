@@ -72,6 +72,7 @@ class ClassInfo:
     multiname_index: int = 0
     super_multiname_index: int = 0
     interface_multiname_indices: list[int] = field(default_factory=list)
+    _abc: AbcFile | None = field(default=None, repr=False, compare=False)
     _workspace: Workspace | None = field(default=None, repr=False, compare=False)
 
     @property
@@ -182,6 +183,33 @@ class ClassInfo:
         ws = self._require_workspace()
         return ws.constructor_assignments(self.qualified_name)
 
+    @property
+    def abc(self) -> AbcFile:
+        """The AbcFile that defines this class.
+
+        Raises:
+            RuntimeError: if the ClassInfo was built without an AbcFile
+                (e.g. constructed manually rather than via build_class_info).
+        """
+        if self._abc is None:
+            raise RuntimeError(
+                "This ClassInfo has no AbcFile attached. "
+                "Build it via build_class_info() or Workspace.load_swf().")
+        return self._abc
+
+    @property
+    def constructor_params(self) -> list[str]:
+        """Resolved type names of the constructor's parameters.
+
+        Returns an empty list for a zero-arg constructor.
+        """
+        if self._abc is None:
+            return []
+        if self.constructor_index >= len(self._abc.methods):
+            return []
+        mi = self._abc.methods[self.constructor_index]
+        return [resolve_multiname(self._abc, pt) for pt in mi.param_types]
+
 
 def build_class_info(abc: AbcFile, index: int,
                      method_body_map: dict[int, int] | None = None) -> ClassInfo:
@@ -241,7 +269,8 @@ def build_class_info(abc: AbcFile, index: int,
         super_multiname_index=inst.super_name,
         interface_multiname_indices=list(inst.interfaces),
     )
-    # Wire up backrefs so fields/methods can reach the workspace
+    # Wire up backrefs so fields/methods can reach the workspace/abc
+    ci._abc = abc
     for f in ci.fields + ci.static_fields:
         f._owner_class = ci
     for m in ci.methods + ci.static_methods:

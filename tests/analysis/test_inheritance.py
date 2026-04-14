@@ -191,3 +191,12 @@ class TestInheritanceEdgeCases:
         assert graph.get_parent("Nonexistent") is None
         assert graph.get_children("Nonexistent") == []
         assert graph.get_depth("Nonexistent") == -1
+
+
+class TestFromWorkspace:
+    def test_from_workspace_matches_from_classes(self, loaded_workspace):
+        ws = loaded_workspace
+        g_a = InheritanceGraph.from_workspace(ws)
+        g_b = InheritanceGraph.from_classes(ws.classes)
+        assert set(g_a.classes.keys()) == set(g_b.classes.keys())
+        assert g_a.parent_map == g_b.parent_map

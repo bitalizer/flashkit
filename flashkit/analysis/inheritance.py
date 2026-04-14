@@ -21,10 +21,14 @@ Usage::
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from dataclasses import dataclass, field
 from collections import defaultdict
 
 from ..info.class_info import ClassInfo
+
+if TYPE_CHECKING:
+    from ..workspace.workspace import Workspace
 
 
 @dataclass(slots=True)
@@ -75,6 +79,20 @@ class InheritanceGraph:
                 graph.implementors_map[iface].add(key)
 
         return graph
+
+    @classmethod
+    def from_workspace(cls, workspace: Workspace) -> InheritanceGraph:
+        """Build an InheritanceGraph from a Workspace's loaded classes.
+
+        Equivalent to ``InheritanceGraph.from_classes(workspace.classes)``.
+
+        Args:
+            workspace: Workspace instance with loaded classes.
+
+        Returns:
+            Populated InheritanceGraph.
+        """
+        return cls.from_classes(workspace.classes)
 
     def get_parent(self, name: str) -> str | None:
         """Get the direct superclass of a class.

@@ -259,9 +259,11 @@ class ClassGraph:
             node = graph.nodes.get(info.name)
             if node is None:
                 continue
-            if info._abc is None:
+            try:
+                abc = info.abc
+            except RuntimeError:
                 continue
-            fps = extract_all_fingerprints(info, info._abc)
+            fps = extract_all_fingerprints(info, abc)
             node.method_fps = fps
             node.total_code_size = sum(fp.code_size for fp in fps)
 

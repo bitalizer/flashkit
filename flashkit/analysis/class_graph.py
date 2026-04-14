@@ -17,11 +17,11 @@ reason about method shapes without re-walking the ABC.
 Typical usage::
 
     from flashkit.workspace import Workspace
-    from flashkit.analysis import build_class_graph
+    from flashkit.analysis import ClassGraph
 
     ws = Workspace()
     ws.load_swf("game.swf")
-    g = build_class_graph(ws)
+    g = ClassGraph.from_workspace(ws)
 
     node = g.nodes["PlayerController"]
     print(node.out_degree_by_kind)          # {'call': 12, 'field_type': 3, ...}
@@ -33,8 +33,11 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
-from ..workspace.workspace import Workspace
+if TYPE_CHECKING:
+    from ..workspace.workspace import Workspace
+
 from .references import ReferenceIndex
 from .method_fingerprint import (
     BUILTIN_TYPES,
@@ -48,7 +51,6 @@ __all__ = [
     "CLASS_EDGE_KINDS",
     "ClassNode",
     "ClassGraph",
-    "build_class_graph",
 ]
 
 
@@ -166,101 +168,101 @@ class ClassGraph:
             return 0
         return len(node.out_edges) + len(node.in_edges)
 
+    @classmethod
+    def from_workspace(cls, workspace: Workspace) -> ClassGraph:
+        """Build a :class:`ClassGraph` from a loaded :class:`Workspace`.
 
-def build_class_graph(workspace: Workspace) -> ClassGraph:
-    """Build a :class:`ClassGraph` from a loaded :class:`Workspace`.
+        Walks every class in the workspace, creates a node with intrinsic
+        features, then follows its references to populate typed edges to
+        other user-defined classes. Framework/builtin targets and
+        self-references are filtered out. Finally, method fingerprints are
+        extracted for every class.
 
-    Walks every class in the workspace, creates a node with intrinsic
-    features, then follows its references to populate typed edges to
-    other user-defined classes. Framework/builtin targets and
-    self-references are filtered out. Finally, method fingerprints are
-    extracted for every class.
+        Args:
+            workspace: A :class:`flashkit.workspace.Workspace` with at least
+                one loaded SWF.
 
-    Args:
-        workspace: A :class:`flashkit.workspace.Workspace` with at least
-            one loaded SWF.
+        Returns:
+            A fully populated :class:`ClassGraph`.
+        """
+        ref_index = ReferenceIndex.from_workspace(workspace)
 
-    Returns:
-        A fully populated :class:`ClassGraph`.
-    """
-    ref_index = ReferenceIndex.from_workspace(workspace)
+        # Map qualified + simple names → simple name for edge resolution.
+        all_class_names: set[str] = set()
+        qname_to_name: dict[str, str] = {}
+        for info in workspace.classes:
+            all_class_names.add(info.name)
+            qname_to_name[info.qualified_name] = info.name
+            qname_to_name[info.name] = info.name
 
-    # Map qualified + simple names → simple name for edge resolution.
-    all_class_names: set[str] = set()
-    qname_to_name: dict[str, str] = {}
-    for cls in workspace.classes:
-        all_class_names.add(cls.name)
-        qname_to_name[cls.qualified_name] = cls.name
-        qname_to_name[cls.name] = cls.name
+        graph = cls()
 
-    graph = ClassGraph()
+        # Step 1: create nodes with intrinsic features.
+        for info in workspace.classes:
+            node = ClassNode(
+                name=info.name,
+                package=info.package,
+                method_count=len(info.methods),
+                static_method_count=len(info.static_methods),
+                field_count=len(info.fields),
+                static_field_count=len(info.static_fields),
+                super_name=_normalize_super(info.super_name),
+                is_interface=info.is_interface,
+                is_sealed=info.is_sealed,
+            )
+            graph.nodes[info.name] = node
 
-    # Step 1: create nodes with intrinsic features.
-    for cls in workspace.classes:
-        node = ClassNode(
-            name=cls.name,
-            package=cls.package,
-            method_count=len(cls.methods),
-            static_method_count=len(cls.static_methods),
-            field_count=len(cls.fields),
-            static_field_count=len(cls.static_fields),
-            super_name=_normalize_super(cls.super_name),
-            is_interface=cls.is_interface,
-            is_sealed=cls.is_sealed,
-        )
-        graph.nodes[cls.name] = node
+        # Step 2: walk references to build edges + string pools.
+        class_strings: dict[str, set[str]] = defaultdict(set)
 
-    # Step 2: walk references to build edges + string pools.
-    class_strings: dict[str, set[str]] = defaultdict(set)
+        for info in workspace.classes:
+            refs = ref_index.references_from(info.qualified_name)
+            node = graph.nodes[info.name]
 
-    for cls in workspace.classes:
-        refs = ref_index.references_from(cls.qualified_name)
-        node = graph.nodes[cls.name]
-
-        for ref in refs:
-            if ref.ref_kind == "string_use":
-                class_strings[cls.name].add(ref.target)
-                graph.string_to_classes[ref.target].add(cls.name)
-                continue
-
-            if ref.ref_kind not in CLASS_EDGE_KINDS:
-                continue
-
-            target_name = qname_to_name.get(ref.target)
-            if target_name is None:
-                if ref.target in all_class_names:
-                    target_name = ref.target
-                else:
+            for ref in refs:
+                if ref.ref_kind == "string_use":
+                    class_strings[info.name].add(ref.target)
+                    graph.string_to_classes[ref.target].add(info.name)
                     continue
 
-            if target_name in FRAMEWORK_TYPES:
+                if ref.ref_kind not in CLASS_EDGE_KINDS:
+                    continue
+
+                target_name = qname_to_name.get(ref.target)
+                if target_name is None:
+                    if ref.target in all_class_names:
+                        target_name = ref.target
+                    else:
+                        continue
+
+                if target_name in FRAMEWORK_TYPES:
+                    continue
+                if target_name == info.name:
+                    continue
+
+                edge = (target_name, ref.ref_kind)
+                node.out_edges.append(edge)
+                node.out_degree_by_kind[ref.ref_kind] += 1
+
+                target_node = graph.nodes.get(target_name)
+                if target_node is not None:
+                    target_node.in_edges.append((info.name, ref.ref_kind))
+                    target_node.in_degree_by_kind[ref.ref_kind] += 1
+
+        for cls_name, strings in class_strings.items():
+            node = graph.nodes.get(cls_name)
+            if node is not None:
+                node.string_pool = frozenset(strings)
+
+        # Step 3: extract method fingerprints for each class.
+        for info in workspace.classes:
+            node = graph.nodes.get(info.name)
+            if node is None:
                 continue
-            if target_name == cls.name:
+            if info._abc is None:
                 continue
+            fps = extract_all_fingerprints(info, info._abc)
+            node.method_fps = fps
+            node.total_code_size = sum(fp.code_size for fp in fps)
 
-            edge = (target_name, ref.ref_kind)
-            node.out_edges.append(edge)
-            node.out_degree_by_kind[ref.ref_kind] += 1
-
-            target_node = graph.nodes.get(target_name)
-            if target_node is not None:
-                target_node.in_edges.append((cls.name, ref.ref_kind))
-                target_node.in_degree_by_kind[ref.ref_kind] += 1
-
-    for cls_name, strings in class_strings.items():
-        node = graph.nodes.get(cls_name)
-        if node is not None:
-            node.string_pool = frozenset(strings)
-
-    # Step 3: extract method fingerprints for each class.
-    for cls in workspace.classes:
-        node = graph.nodes.get(cls.name)
-        if node is None:
-            continue
-        if cls._abc is None:
-            continue
-        fps = extract_all_fingerprints(cls, cls._abc)
-        node.method_fps = fps
-        node.total_code_size = sum(fp.code_size for fp in fps)
-
-    return graph
+        return graph

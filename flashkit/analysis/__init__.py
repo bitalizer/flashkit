@@ -29,7 +29,6 @@ from .method_fingerprint import (
 from .class_graph import (
     ClassGraph,
     ClassNode,
-    build_class_graph,
     FRAMEWORK_TYPES,
     CLASS_EDGE_KINDS,
 )
@@ -51,7 +50,6 @@ __all__ = [
     "extract_all_fingerprints",
     "ClassGraph",
     "ClassNode",
-    "build_class_graph",
     "FRAMEWORK_TYPES",
     "CLASS_EDGE_KINDS",
     "build_all_indexes",

@@ -19,11 +19,20 @@ Usage::
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ..abc.types import AbcFile
 from ..info.class_info import ClassInfo
 from ..info.package_info import PackageInfo, group_by_package
 from .resource import Resource, load_swf, load_swz
+
+if TYPE_CHECKING:
+    from ..analysis.inheritance import InheritanceGraph
+    from ..analysis.call_graph import CallGraph
+    from ..analysis.references import ReferenceIndex
+    from ..analysis.strings import StringIndex
+    from ..analysis.field_access import FieldAccessIndex
+    from ..analysis.class_graph import ClassGraph
 
 
 class Workspace:
@@ -48,6 +57,7 @@ class Workspace:
         self._field_access_index = None
         self._inheritance_graph = None
         self._call_graph = None
+        self._class_graph = None
         self._indexes_built = False
 
     def load_swf(self, path: str | Path) -> Resource:
@@ -251,6 +261,7 @@ class Workspace:
         self._field_access_index = None
         self._inheritance_graph = None
         self._call_graph = None
+        self._class_graph = None
         self._indexes_built = False
 
     def _ensure_indexes(self) -> None:
@@ -268,36 +279,44 @@ class Workspace:
         self._indexes_built = True
 
     @property
-    def string_index(self):
+    def string_index(self) -> StringIndex:
         """Lazily-built StringIndex (use convenience methods instead)."""
         self._ensure_indexes()
         return self._string_index
 
     @property
-    def reference_index(self):
+    def reference_index(self) -> ReferenceIndex:
         """Lazily-built ReferenceIndex (use convenience methods instead)."""
         self._ensure_indexes()
         return self._reference_index
 
     @property
-    def field_access_index(self):
+    def field_access_index(self) -> FieldAccessIndex:
         """Lazily-built FieldAccessIndex (use convenience methods instead)."""
         self._ensure_indexes()
         return self._field_access_index
 
     @property
-    def inheritance(self):
+    def inheritance(self) -> InheritanceGraph:
         """Lazily-built InheritanceGraph."""
         self._ensure_indexes()
         return self._inheritance_graph
 
     @property
-    def call_graph(self):
+    def call_graph(self) -> CallGraph:
         """Lazily-built CallGraph."""
         if self._call_graph is None:
             from ..analysis.call_graph import CallGraph
             self._call_graph = CallGraph.from_workspace(self)
         return self._call_graph
+
+    @property
+    def class_graph(self) -> ClassGraph:
+        """Lazily-built ClassGraph (class-to-class reference graph)."""
+        if self._class_graph is None:
+            from ..analysis.class_graph import ClassGraph
+            self._class_graph = ClassGraph.from_workspace(self)
+        return self._class_graph
 
     # ── Call graph ────────────────────────────────────────────────────
 

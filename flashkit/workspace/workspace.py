@@ -722,10 +722,7 @@ class Workspace:
         if cls is None:
             raise KeyError(f"Class '{class_name}' not found")
 
-        abc = cls._abc
-        if abc is None:
-            raise ValueError(
-                f"Class '{class_name}' has no AbcFile back-reference")
+        abc = cls.abc
 
         # Constructor / static initializer
         if method_name in ("<init>", "<cinit>"):

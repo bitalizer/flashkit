@@ -234,7 +234,8 @@ class AstPrinter:
 
     def _p_CompoundAssignExpr(self, node: N.CompoundAssignExpr) -> None:
         self._print_expr_in_context(node.target, _ASSIGN + 1)
-        self._emit(f" {node.op} ")
+        op = node.op if node.op.endswith("=") else f"{node.op}="
+        self._emit(f" {op} ")
         self._print_expr_in_context(node.value, _ASSIGN)
 
     def _p_CastExpr(self, node: N.CastExpr) -> None:

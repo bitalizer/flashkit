@@ -29,21 +29,27 @@ if TYPE_CHECKING:
 
 from ..abc.types import AbcFile
 from ..abc.disasm import scan_relevant_opcodes
-from ..abc.constants import (
-    OP_callproperty, OP_callpropvoid, OP_constructprop,
-    OP_getproperty, OP_setproperty, OP_initproperty,
-    OP_getlex, OP_findpropstrict, OP_newclass,
+from ..abc.opcodes import (
+    OP_CALLPROPERTY,
+    OP_CALLPROPVOID,
+    OP_CONSTRUCTPROP,
+    OP_GETPROPERTY,
+    OP_SETPROPERTY,
+    OP_INITPROPERTY,
+    OP_GETLEX,
+    OP_FINDPROPSTRICT,
+    OP_NEWCLASS,
 )
 from ..info.member_info import resolve_multiname, build_method_body_map
 from ..info.class_info import ClassInfo
 
 
 # Opcode categories for edges
-CALL_OPS = {OP_callproperty, OP_callpropvoid}
-CONSTRUCT_OPS = {OP_constructprop}
-PROPERTY_READ_OPS = {OP_getproperty, OP_getlex, OP_findpropstrict}
-PROPERTY_WRITE_OPS = {OP_setproperty, OP_initproperty}
-CLASS_OPS = {OP_newclass}
+CALL_OPS = {OP_CALLPROPERTY, OP_CALLPROPVOID}
+CONSTRUCT_OPS = {OP_CONSTRUCTPROP}
+PROPERTY_READ_OPS = {OP_GETPROPERTY, OP_GETLEX, OP_FINDPROPSTRICT}
+PROPERTY_WRITE_OPS = {OP_SETPROPERTY, OP_INITPROPERTY}
+CLASS_OPS = {OP_NEWCLASS}
 
 # All opcodes that reference a multiname in their first operand
 _MULTINAME_OPS = frozenset(
@@ -53,15 +59,15 @@ _MULTINAME_OPS = frozenset(
 
 # Opcode → mnemonic for CallEdge (avoids importing the full lookup table)
 _OP_MNEMONIC = {
-    OP_callproperty: "callproperty",
-    OP_callpropvoid: "callpropvoid",
-    OP_constructprop: "constructprop",
-    OP_getproperty: "getproperty",
-    OP_setproperty: "setproperty",
-    OP_initproperty: "initproperty",
-    OP_getlex: "getlex",
-    OP_findpropstrict: "findpropstrict",
-    OP_newclass: "newclass",
+    OP_CALLPROPERTY: "callproperty",
+    OP_CALLPROPVOID: "callpropvoid",
+    OP_CONSTRUCTPROP: "constructprop",
+    OP_GETPROPERTY: "getproperty",
+    OP_SETPROPERTY: "setproperty",
+    OP_INITPROPERTY: "initproperty",
+    OP_GETLEX: "getlex",
+    OP_FINDPROPSTRICT: "findpropstrict",
+    OP_NEWCLASS: "newclass",
 }
 
 

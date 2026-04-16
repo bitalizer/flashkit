@@ -2,7 +2,7 @@
 String pool analysis and search.
 
 Provides filtered views into the ABC string pool and tracks where each
-string constant is used in method bodies via OP_pushstring instructions.
+string constant is used in method bodies via OP_PUSHSTRING instructions.
 
 Usage::
 
@@ -29,10 +29,10 @@ if TYPE_CHECKING:
 
 from ..abc.types import AbcFile
 from ..abc.disasm import scan_relevant_opcodes
-from ..abc.constants import OP_pushstring, OP_debugfile
+from ..abc.opcodes import OP_PUSHSTRING, OP_DEBUGFILE
 from ..info.member_info import resolve_multiname, build_method_body_map
 
-_STRING_SCAN_OPS = frozenset({OP_pushstring, OP_debugfile})
+_STRING_SCAN_OPS = frozenset({OP_PUSHSTRING, OP_DEBUGFILE})
 from ..info.class_info import ClassInfo
 
 
@@ -45,15 +45,15 @@ class StringUsage:
         class_name: Qualified name of the owning class.
         method_name: Method name where the string is pushed.
         method_index: Index into AbcFile.methods.
-        offset: Bytecode offset of the OP_pushstring instruction.
-        opcode: The opcode (OP_pushstring or OP_debugfile).
+        offset: Bytecode offset of the OP_PUSHSTRING instruction.
+        opcode: The opcode (OP_PUSHSTRING or OP_DEBUGFILE).
     """
     string: str
     class_name: str
     method_name: str
     method_index: int
     offset: int
-    opcode: int = OP_pushstring
+    opcode: int = OP_PUSHSTRING
 
 
 @dataclass(slots=True)
@@ -87,7 +87,7 @@ class StringIndex:
         """Build a StringIndex from a Workspace.
 
         Walks all method bodies, decodes instructions, and collects
-        OP_pushstring and OP_debugfile references.
+        OP_PUSHSTRING and OP_DEBUGFILE references.
 
         Args:
             workspace: A Workspace instance.

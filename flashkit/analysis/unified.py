@@ -22,11 +22,18 @@ if TYPE_CHECKING:
 
 from ..abc.types import AbcFile
 from ..abc.disasm import scan_relevant_opcodes
-from ..abc.constants import (
-    OP_pushstring, OP_debugfile,
-    OP_constructprop, OP_callproperty, OP_callpropvoid,
-    OP_getlex, OP_coerce, OP_newclass,
-    OP_getproperty, OP_setproperty, OP_initproperty,
+from ..abc.opcodes import (
+    OP_PUSHSTRING,
+    OP_DEBUGFILE,
+    OP_CONSTRUCTPROP,
+    OP_CALLPROPERTY,
+    OP_CALLPROPVOID,
+    OP_GETLEX,
+    OP_COERCE,
+    OP_NEWCLASS,
+    OP_GETPROPERTY,
+    OP_SETPROPERTY,
+    OP_INITPROPERTY,
 )
 from ..info.member_info import resolve_multiname
 from ..info.class_info import ClassInfo
@@ -55,32 +62,32 @@ def _build_method_maps(
 
 # Opcodes relevant to ReferenceIndex
 _REF_OPCODES = frozenset({
-    OP_constructprop, OP_callproperty, OP_callpropvoid,
-    OP_getlex, OP_coerce, OP_pushstring,
+    OP_CONSTRUCTPROP, OP_CALLPROPERTY, OP_CALLPROPVOID,
+    OP_GETLEX, OP_COERCE, OP_PUSHSTRING,
 })
 
 # Opcode → ref_kind mapping
 _REF_KIND = {
-    OP_constructprop: "instantiation",
-    OP_callproperty: "call",
-    OP_callpropvoid: "call",
-    OP_getlex: "class_ref",
-    OP_coerce: "coerce",
+    OP_CONSTRUCTPROP: "instantiation",
+    OP_CALLPROPERTY: "call",
+    OP_CALLPROPVOID: "call",
+    OP_GETLEX: "class_ref",
+    OP_COERCE: "coerce",
 }
 
 # Opcodes relevant to FieldAccessIndex
 _FIELD_OPS = {
-    OP_getproperty: "read",
-    OP_setproperty: "write",
-    OP_initproperty: "init",
+    OP_GETPROPERTY: "read",
+    OP_SETPROPERTY: "write",
+    OP_INITPROPERTY: "init",
 }
 
 # Opcodes relevant to StringIndex
-_STRING_OPS = frozenset({OP_pushstring, OP_debugfile})
+_STRING_OPS = frozenset({OP_PUSHSTRING, OP_DEBUGFILE})
 
 # All opcodes the unified scanner needs to capture
 _ALL_RELEVANT_OPS = frozenset(
-    _STRING_OPS | frozenset(_FIELD_OPS) | frozenset(_REF_KIND) | {OP_pushstring}
+    _STRING_OPS | frozenset(_FIELD_OPS) | frozenset(_REF_KIND) | {OP_PUSHSTRING}
 )
 
 
@@ -131,7 +138,7 @@ def build_all_indexes(
                 continue
 
             for offset, op, operand in hits:
-                # StringIndex: OP_pushstring, OP_debugfile
+                # StringIndex: OP_PUSHSTRING, OP_DEBUGFILE
                 if op in _STRING_OPS:
                     if 0 < operand < string_pool_len:
                         str_idx._add(StringUsage(
@@ -168,7 +175,7 @@ def build_all_indexes(
                             method_index=body.method,
                             offset=offset,
                         ))
-                elif op == OP_pushstring:
+                elif op == OP_PUSHSTRING:
                     if 0 < operand < string_pool_len:
                         ref_idx._add(Reference(
                             source_class=owner_class,

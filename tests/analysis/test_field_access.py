@@ -31,7 +31,7 @@ def _build_field_index(setup_fn):
 
 class TestFieldWrite:
     def test_setproperty_tracked(self):
-        """OP_setproperty on a field is tracked as a write."""
+        """OP_SETPROPERTY on a field is tracked as a write."""
         def setup(b, pub, priv):
             cls_mn = b.qname(pub, "Entity")
             field_mn = b.qname(priv, "health")
@@ -57,7 +57,7 @@ class TestFieldWrite:
         assert "reset" in writers
 
     def test_initproperty_tracked(self):
-        """OP_initproperty on a field is tracked as an init (write)."""
+        """OP_INITPROPERTY on a field is tracked as an init (write)."""
         def setup(b, pub, priv):
             cls_mn = b.qname(pub, "Config")
             field_mn = b.qname(priv, "version")
@@ -84,7 +84,7 @@ class TestFieldWrite:
 
 class TestFieldRead:
     def test_getproperty_tracked(self):
-        """OP_getproperty on a field is tracked as a read."""
+        """OP_GETPROPERTY on a field is tracked as a read."""
         def setup(b, pub, priv):
             cls_mn = b.qname(pub, "Player")
             field_mn = b.qname(priv, "score")

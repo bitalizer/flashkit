@@ -1,8 +1,8 @@
 """
 Field access analysis from method body bytecode.
 
-Tracks which methods read (``OP_getproperty``) and write
-(``OP_setproperty``, ``OP_initproperty``) which fields. Provides
+Tracks which methods read (``OP_GETPROPERTY``) and write
+(``OP_SETPROPERTY``, ``OP_INITPROPERTY``) which fields. Provides
 per-field and per-method views, plus constructor-specific queries.
 
 Usage::
@@ -30,14 +30,14 @@ if TYPE_CHECKING:
 
 from ..abc.types import AbcFile
 from ..abc.disasm import scan_relevant_opcodes
-from ..abc.constants import OP_getproperty, OP_setproperty, OP_initproperty
+from ..abc.opcodes import OP_GETPROPERTY, OP_SETPROPERTY, OP_INITPROPERTY
 
-_FIELD_SCAN_OPS = frozenset({OP_getproperty, OP_setproperty, OP_initproperty})
+_FIELD_SCAN_OPS = frozenset({OP_GETPROPERTY, OP_SETPROPERTY, OP_INITPROPERTY})
 
 _FIELD_ACCESS_TYPE = {
-    OP_getproperty: "read",
-    OP_setproperty: "write",
-    OP_initproperty: "init",
+    OP_GETPROPERTY: "read",
+    OP_SETPROPERTY: "write",
+    OP_INITPROPERTY: "init",
 }
 from ..info.member_info import resolve_multiname
 from ..info.class_info import ClassInfo
@@ -67,8 +67,8 @@ class FieldAccess:
 class FieldAccessIndex:
     """Index of field accesses across all method bodies.
 
-    Tracks every ``OP_getproperty`` (read), ``OP_setproperty`` (write),
-    and ``OP_initproperty`` (init) instruction, mapping them to the
+    Tracks every ``OP_GETPROPERTY`` (read), ``OP_SETPROPERTY`` (write),
+    and ``OP_INITPROPERTY`` (init) instruction, mapping them to the
     owning class and method.
 
     Attributes:
@@ -262,7 +262,7 @@ class FieldAccessIndex:
     def constructor_assignments(self, class_name: str) -> list[str]:
         """Get fields assigned in the constructor, in bytecode order.
 
-        Returns fields set via ``OP_setproperty`` or ``OP_initproperty``
+        Returns fields set via ``OP_SETPROPERTY`` or ``OP_INITPROPERTY``
         in the ``<init>`` method. Order matches the bytecode, which
         typically follows source declaration order.
 

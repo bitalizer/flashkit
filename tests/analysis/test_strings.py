@@ -14,7 +14,7 @@ def _build_string_index(string_values):
     """Build a StringIndex from a class whose method pushes the given strings.
 
     Args:
-        string_values: List of strings to push via OP_pushstring.
+        string_values: List of strings to push via OP_PUSHSTRING.
 
     Returns:
         (StringIndex, classes)

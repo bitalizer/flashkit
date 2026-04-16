@@ -20,7 +20,20 @@ from dataclasses import dataclass, field
 
 from ..errors import ABCParseError
 from .parser import read_u30, read_u8
-from .constants import *
+from .opcodes import (
+    OPCODE_TABLE,
+    OP_LOOKUPSWITCH, OP_DEBUG,
+    OP_GETPROPERTY, OP_SETPROPERTY, OP_INITPROPERTY,
+    OP_GETLEX, OP_FINDPROPSTRICT, OP_FINDPROPERTY,
+    OP_CALLPROPERTY, OP_CALLPROPVOID, OP_CALLPROPLEX,
+    OP_CALLSUPER, OP_CALLSUPERVOID,
+    OP_CONSTRUCTPROP,
+    OP_GETSUPER, OP_SETSUPER,
+    OP_GETDESCENDANTS, OP_DELETEPROPERTY,
+    OP_COERCE, OP_ASTYPE, OP_ISTYPE,
+    OP_PUSHSTRING, OP_PUSHINT, OP_PUSHUINT, OP_PUSHDOUBLE,
+    OP_NEWCLASS,
+)
 
 log = logging.getLogger(__name__)
 
@@ -61,219 +74,11 @@ class ResolvedInstruction:
     operands: list[str] = field(default_factory=list)
 
 
-# ── Opcode table ────────────────────────────────────────────────────────────
-# Maps opcode → (mnemonic, operand_format)
-# Operand formats:
-#   ""       = no operands
-#   "u30"    = one u30
-#   "u30u30" = two u30s
-#   "u8"     = one byte
-#   "s24"    = signed 24-bit offset
-#   "u30u8"  = u30 + byte (hasnext2 uses this differently, but close enough)
-#   "special" = handled individually (lookupswitch, debug)
+# The authoritative opcode table lives in :mod:`flashkit.abc.opcodes`.
+# ``_LOOKUP`` is a direct alias so downstream code that imported it keeps
+# working; new code should import ``OPCODE_TABLE`` from :mod:`.opcodes`.
 
-_OPCODE_TABLE: dict[int, tuple[str, str]] = {
-    # Control flow
-    OP_nop:            ("nop",            ""),
-    OP_throw:          ("throw",          ""),
-    OP_label:          ("label",          ""),
-    OP_jump:           ("jump",           "s24"),
-    OP_iftrue:         ("iftrue",         "s24"),
-    OP_iffalse:        ("iffalse",        "s24"),
-    OP_ifeq:           ("ifeq",           "s24"),
-    OP_ifne:           ("ifne",           "s24"),
-    OP_iflt:           ("iflt",           "s24"),
-    OP_ifle:           ("ifle",           "s24"),
-    OP_ifgt:           ("ifgt",           "s24"),
-    OP_ifge:           ("ifge",           "s24"),
-    OP_ifstricteq:     ("ifstricteq",     "s24"),
-    OP_ifstrictne:     ("ifstrictne",     "s24"),
-    OP_lookupswitch:   ("lookupswitch",   "special"),
-
-    # Scope
-    OP_pushwith:       ("pushwith",       ""),
-    OP_popscope:       ("popscope",       ""),
-    OP_pushscope:      ("pushscope",      ""),
-    OP_getscopeobject: ("getscopeobject", "u30"),
-
-    # Stack
-    OP_pop:            ("pop",            ""),
-    OP_dup:            ("dup",            ""),
-    OP_swap:           ("swap",           ""),
-
-    # Push constants
-    OP_pushnull:       ("pushnull",       ""),
-    OP_pushundefined:  ("pushundefined",  ""),
-    OP_pushtrue:       ("pushtrue",       ""),
-    OP_pushfalse:      ("pushfalse",      ""),
-    OP_pushnan:        ("pushnan",        ""),
-    OP_pushbyte:       ("pushbyte",       "u8"),
-    OP_pushshort:      ("pushshort",      "u30"),
-    OP_pushstring:     ("pushstring",     "u30"),
-    OP_pushint:        ("pushint",        "u30"),
-    OP_pushuint:       ("pushuint",       "u30"),
-    OP_pushdouble:     ("pushdouble",     "u30"),
-
-    # Iteration
-    OP_nextname:       ("nextname",       ""),
-    OP_hasnext:        ("hasnext",        ""),
-    OP_nextvalue:      ("nextvalue",      ""),
-    OP_hasnext2:       ("hasnext2",       "u30u30"),
-
-    # Locals
-    OP_getlocal:       ("getlocal",       "u30"),
-    OP_setlocal:       ("setlocal",       "u30"),
-    OP_getlocal_0:     ("getlocal_0",     ""),
-    OP_getlocal_1:     ("getlocal_1",     ""),
-    OP_getlocal_2:     ("getlocal_2",     ""),
-    OP_getlocal_3:     ("getlocal_3",     ""),
-    OP_setlocal_0:     ("setlocal_0",     ""),
-    OP_setlocal_1:     ("setlocal_1",     ""),
-    OP_setlocal_2:     ("setlocal_2",     ""),
-    OP_setlocal_3:     ("setlocal_3",     ""),
-
-    # Properties
-    OP_getproperty:    ("getproperty",    "u30"),
-    OP_setproperty:    ("setproperty",    "u30"),
-    OP_initproperty:   ("initproperty",   "u30"),
-    OP_getlex:         ("getlex",         "u30"),
-    OP_findpropstrict: ("findpropstrict", "u30"),
-
-    # Calls
-    OP_call:           ("call",           "u30"),
-    OP_construct:      ("construct",      "u30"),
-    OP_callproperty:   ("callproperty",   "u30u30"),
-    OP_returnvoid:     ("returnvoid",     ""),
-    OP_returnvalue:    ("returnvalue",    ""),
-    OP_constructsuper: ("constructsuper",  "u30"),
-    OP_constructprop:  ("constructprop",  "u30u30"),
-    OP_callpropvoid:   ("callpropvoid",   "u30u30"),
-
-    # Object creation
-    OP_newfunction:    ("newfunction",    "u30"),
-    OP_newarray:       ("newarray",       "u30"),
-    OP_newclass:       ("newclass",       "u30"),
-
-    # Type conversion
-    OP_convert_s:      ("convert_s",      ""),
-    OP_convert_i:      ("convert_i",      ""),
-    OP_convert_d:      ("convert_d",      ""),
-    OP_coerce:         ("coerce",         "u30"),
-    OP_coerce_a:       ("coerce_a",       ""),
-    OP_coerce_s:       ("coerce_s",       ""),
-
-    # Comparison & logic
-    OP_typeof:         ("typeof",         ""),
-    OP_not:            ("not",            ""),
-    OP_equals:         ("equals",         ""),
-    OP_strictequals:   ("strictequals",   ""),
-    OP_lessthan:       ("lessthan",       ""),
-    OP_lessequals:     ("lessequals",     ""),
-    OP_greaterthan:    ("greaterthan",    ""),
-    OP_greaterequals:  ("greaterequals",  ""),
-
-    # Arithmetic
-    OP_increment:      ("increment",      ""),
-    OP_decrement:      ("decrement",      ""),
-    OP_add:            ("add",            ""),
-    OP_subtract:       ("subtract",       ""),
-    OP_multiply:       ("multiply",       ""),
-    OP_divide:         ("divide",         ""),
-    OP_modulo:         ("modulo",         ""),
-    OP_increment_i:    ("increment_i",    ""),
-    OP_decrement_i:    ("decrement_i",    ""),
-
-    # Bitwise
-    OP_bitor:          ("bitor",          ""),
-    OP_bitand:         ("bitand",         ""),
-    OP_bitxor:         ("bitxor",         ""),
-    OP_lshift:         ("lshift",         ""),
-    OP_rshift:         ("rshift",         ""),
-    OP_urshift:        ("urshift",        ""),
-    OP_bitnot:         ("bitnot",         ""),
-
-    # Debugging
-    OP_debug:          ("debug",          "special"),
-    OP_debugline:      ("debugline",      "u30"),
-    OP_debugfile:      ("debugfile",      "u30"),
-}
-
-# Additional opcodes not in our OP_ constants but valid AVM2
-_EXTRA_OPCODES: dict[int, tuple[str, str]] = {
-    0x04: ("getsuper",        "u30"),
-    0x05: ("setsuper",        "u30"),
-    0x06: ("dxns",            "u30"),
-    0x07: ("dxnslate",        ""),
-    0x08: ("kill",            "u30"),
-    0x0C: ("ifnlt",           "s24"),
-    0x0D: ("ifnle",           "s24"),
-    0x0E: ("ifngt",           "s24"),
-    0x0F: ("ifnge",           "s24"),
-    0x1E: ("nextname",        ""),
-    0x30: ("pushscope",       ""),
-    0x43: ("callmethod",      "u30u30"),
-    0x44: ("callstatic",      "u30u30"),
-    0x45: ("callsuper",       "u30u30"),
-    0x4C: ("callproplex",     "u30u30"),
-    0x4E: ("callsupervoid",   "u30u30"),
-    0x53: ("applytype",       "u30"),
-    0x55: ("newobject",       "u30"),
-    0x57: ("newactivation",   ""),
-    0x59: ("getdescendants",  "u30"),
-    0x5A: ("newcatch",        "u30"),
-    0x5E: ("findproperty",    "u30"),
-    0x64: ("getglobalscope",  ""),
-    0x6A: ("deleteproperty",  "u30"),
-    0x6C: ("getslot",         "u30"),
-    0x6D: ("setslot",         "u30"),
-    0x6E: ("getglobalslot",   "u30"),
-    0x6F: ("setglobalslot",   "u30"),
-    0x70: ("convert_s",       ""),
-    0x71: ("esc_xelem",       ""),
-    0x72: ("esc_xattr",       ""),
-    0x73: ("convert_i",       ""),
-    0x74: ("convert_u",       ""),
-    0x75: ("convert_d",       ""),
-    0x76: ("convert_b",       ""),
-    0x77: ("convert_o",       ""),
-    0x78: ("checkfilter",     ""),
-    0x80: ("coerce",          "u30"),
-    0x81: ("coerce_b",        ""),
-    0x83: ("coerce_i",        ""),
-    0x84: ("coerce_d",        ""),
-    0x86: ("astype",          "u30"),
-    0x87: ("astypelate",      ""),
-    0x88: ("coerce_u",        ""),
-    0x89: ("coerce_o",        ""),
-    0x90: ("negate",          ""),
-    0x92: ("inclocal",        "u30"),
-    0x94: ("declocal",        "u30"),
-    0x96: ("not",             ""),
-    0x97: ("bitnot",          ""),
-    0x9A: ("concat",          ""),
-    0x9B: ("add_d",           ""),
-    0xA0: ("add",             ""),
-    0xA5: ("lshift",          ""),
-    0xA6: ("rshift",          ""),
-    0xA7: ("urshift",         ""),
-    0xA8: ("bitand",          ""),
-    0xA9: ("bitor",           ""),
-    0xAA: ("bitxor",          ""),
-    0xB1: ("instanceof",      ""),
-    0xB2: ("istype",          "u30"),
-    0xB3: ("istypelate",      ""),
-    0xB4: ("in",              ""),
-    0xC0: ("increment_i",     ""),
-    0xC1: ("decrement_i",     ""),
-    0xC2: ("inclocal_i",      "u30"),
-    0xC3: ("declocal_i",      "u30"),
-    0xC4: ("negate_i",        ""),
-    0xC5: ("add_i",           ""),
-    0xC6: ("subtract_i",      ""),
-    0xC7: ("multiply_i",      ""),
-    0xF0: ("debugline",       "u30"),
-    0xF1: ("debugfile",       "u30"),
-}
+_LOOKUP = OPCODE_TABLE
 
 
 def _read_s24(data: bytes, offset: int) -> tuple[int, int]:
@@ -282,15 +87,6 @@ def _read_s24(data: bytes, offset: int) -> tuple[int, int]:
     if val & 0x800000:
         val -= 0x1000000
     return val, offset + 3
-
-
-def _build_lookup() -> dict[int, tuple[str, str]]:
-    """Build the combined opcode lookup table."""
-    lookup = dict(_EXTRA_OPCODES)
-    lookup.update(_OPCODE_TABLE)  # primary table takes precedence
-    return lookup
-
-_LOOKUP = _build_lookup()
 
 
 # ── Fast operand-format table for the lightweight scanner ──────────────────
@@ -306,8 +102,8 @@ def _build_skip_table() -> list[int]:
     tbl = [0xFF] * 256
     for op, (_, fmt) in _LOOKUP.items():
         if fmt == "special":
-            # OP_lookupswitch=5, OP_debug=6
-            tbl[op] = 5 if op == OP_lookupswitch else 6
+            # OP_LOOKUPSWITCH=5, OP_DEBUG=6
+            tbl[op] = 5 if op == OP_LOOKUPSWITCH else 6
         else:
             tbl[op] = _FMT_CODE.get(fmt, 0)
     return tbl
@@ -459,7 +255,7 @@ def decode_instructions(code: bytes,
                 val, off = _read_s24(code, off)
                 operands.append(val)
             elif fmt == "special":
-                if op == OP_lookupswitch:
+                if op == OP_LOOKUPSWITCH:
                     default_off, off = _read_s24(code, off)
                     case_count, off = read_u30(code, off)
                     operands.append(default_off)
@@ -467,7 +263,7 @@ def decode_instructions(code: bytes,
                     for _ in range(case_count + 1):
                         case_off, off = _read_s24(code, off)
                         operands.append(case_off)
-                elif op == OP_debug:
+                elif op == OP_DEBUG:
                     debug_type, off = read_u8(code, off)
                     index, off = read_u30(code, off)
                     reg, off = read_u8(code, off)
@@ -495,35 +291,26 @@ def decode_instructions(code: bytes,
 # ── Opcodes grouped by operand resolution type ─────────────────────────────
 # First operand is a multiname pool index
 _MULTINAME_FIRST = frozenset({
-    OP_getproperty, OP_setproperty, OP_initproperty,
-    OP_getlex, OP_findpropstrict,
-    OP_callproperty, OP_callpropvoid, OP_constructprop,
-    OP_coerce,
-    # Extra opcodes (from _EXTRA_OPCODES)
-    0x04,  # getsuper
-    0x05,  # setsuper
-    0x5E,  # findproperty
-    0x45,  # callsuper
-    0x4C,  # callproplex
-    0x4E,  # callsupervoid
-    0x59,  # getdescendants
-    0x6A,  # deleteproperty
-    0x80,  # coerce
-    0x86,  # astype
-    0xB2,  # istype
+    OP_GETPROPERTY, OP_SETPROPERTY, OP_INITPROPERTY,
+    OP_GETLEX, OP_FINDPROPSTRICT, OP_FINDPROPERTY,
+    OP_CALLPROPERTY, OP_CALLPROPVOID, OP_CONSTRUCTPROP,
+    OP_CALLPROPLEX, OP_CALLSUPER, OP_CALLSUPERVOID,
+    OP_GETSUPER, OP_SETSUPER,
+    OP_GETDESCENDANTS, OP_DELETEPROPERTY,
+    OP_COERCE, OP_ASTYPE, OP_ISTYPE,
 })
 
 # First operand is a string pool index
-_STRING_FIRST = frozenset({OP_pushstring})
+_STRING_FIRST = frozenset({OP_PUSHSTRING})
 
 # First operand is an int pool index
-_INT_FIRST = frozenset({OP_pushint})
+_INT_FIRST = frozenset({OP_PUSHINT})
 
 # First operand is a uint pool index
-_UINT_FIRST = frozenset({OP_pushuint})
+_UINT_FIRST = frozenset({OP_PUSHUINT})
 
 # First operand is a double pool index
-_DOUBLE_FIRST = frozenset({OP_pushdouble})
+_DOUBLE_FIRST = frozenset({OP_PUSHDOUBLE})
 
 
 def resolve_instructions(
@@ -577,7 +364,7 @@ def resolve_instructions(
                     ops.append(str(abc.double_pool[val]))
                 else:
                     ops.append(f"double[{val}]")
-            elif i == 0 and op == OP_newclass:
+            elif i == 0 and op == OP_NEWCLASS:
                 # val = class index
                 if 0 <= val < len(abc.instances):
                     try:

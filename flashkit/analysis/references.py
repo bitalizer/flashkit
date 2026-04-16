@@ -28,23 +28,28 @@ if TYPE_CHECKING:
 
 from ..abc.types import AbcFile
 from ..abc.disasm import scan_relevant_opcodes
-from ..abc.constants import (
-    OP_pushstring, OP_constructprop, OP_callproperty, OP_callpropvoid,
-    OP_getlex, OP_coerce, OP_newclass,
+from ..abc.opcodes import (
+    OP_PUSHSTRING,
+    OP_CONSTRUCTPROP,
+    OP_CALLPROPERTY,
+    OP_CALLPROPVOID,
+    OP_GETLEX,
+    OP_COERCE,
+    OP_NEWCLASS,
 )
 from ..info.member_info import resolve_multiname, build_method_body_map
 
 _REF_SCAN_OPS = frozenset({
-    OP_constructprop, OP_callproperty, OP_callpropvoid,
-    OP_getlex, OP_coerce, OP_pushstring,
+    OP_CONSTRUCTPROP, OP_CALLPROPERTY, OP_CALLPROPVOID,
+    OP_GETLEX, OP_COERCE, OP_PUSHSTRING,
 })
 
 _REF_KIND_MAP = {
-    OP_constructprop: "instantiation",
-    OP_callproperty: "call",
-    OP_callpropvoid: "call",
-    OP_getlex: "class_ref",
-    OP_coerce: "coerce",
+    OP_CONSTRUCTPROP: "instantiation",
+    OP_CALLPROPERTY: "call",
+    OP_CALLPROPVOID: "call",
+    OP_GETLEX: "class_ref",
+    OP_COERCE: "coerce",
 }
 from ..info.class_info import ClassInfo
 
@@ -214,7 +219,7 @@ class ReferenceIndex:
                 continue
 
             for offset, op, operand in hits:
-                if op == OP_pushstring:
+                if op == OP_PUSHSTRING:
                     if 0 < operand < string_pool_len:
                         self._add(Reference(
                             source_class=owner_class,

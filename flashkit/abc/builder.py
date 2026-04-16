@@ -56,21 +56,23 @@ from .constants import (
     METHOD_HasOptional, METHOD_HasParamNames,
     METHOD_NeedArguments, METHOD_NeedActivation, METHOD_NeedRest,
     INSTANCE_Sealed, INSTANCE_Final, INSTANCE_Interface, INSTANCE_ProtectedNs,
-    OP_getlocal_0, OP_pushscope, OP_returnvoid, OP_returnvalue,
-    OP_constructsuper, OP_pushstring, OP_callpropvoid, OP_callproperty,
-    OP_getproperty, OP_setproperty, OP_getlex, OP_findpropstrict,
-    OP_constructprop, OP_newarray, OP_newclass, OP_coerce,
-    OP_pop, OP_dup, OP_swap, OP_pushtrue, OP_pushfalse, OP_pushnull,
-    OP_pushundefined, OP_pushbyte, OP_pushshort, OP_pushint, OP_pushuint,
-    OP_pushdouble, OP_convert_i, OP_convert_s, OP_convert_d,
-    OP_coerce_a, OP_coerce_s, OP_initproperty, OP_getlocal,
-    OP_setlocal, OP_getlocal_1, OP_getlocal_2, OP_getlocal_3,
-    OP_setlocal_0, OP_setlocal_1, OP_setlocal_2, OP_setlocal_3,
-    OP_newfunction, OP_call, OP_construct,
-    OP_jump, OP_iftrue, OP_iffalse,
-    OP_add, OP_subtract, OP_multiply, OP_divide,
-    OP_equals, OP_strictequals, OP_lessthan, OP_greaterequals,
-    OP_not, OP_nop, OP_label, OP_throw, OP_debugfile, OP_debugline,
+)
+from .opcodes import (
+    OP_GETLOCAL_0, OP_PUSHSCOPE, OP_RETURNVOID, OP_RETURNVALUE,
+    OP_CONSTRUCTSUPER, OP_PUSHSTRING, OP_CALLPROPVOID, OP_CALLPROPERTY,
+    OP_GETPROPERTY, OP_SETPROPERTY, OP_GETLEX, OP_FINDPROPSTRICT,
+    OP_CONSTRUCTPROP, OP_NEWARRAY, OP_NEWCLASS, OP_COERCE,
+    OP_POP, OP_DUP, OP_SWAP, OP_PUSHTRUE, OP_PUSHFALSE, OP_PUSHNULL,
+    OP_PUSHUNDEFINED, OP_PUSHBYTE, OP_PUSHSHORT, OP_PUSHINT, OP_PUSHUINT,
+    OP_PUSHDOUBLE, OP_CONVERT_I, OP_CONVERT_S, OP_CONVERT_D,
+    OP_COERCE_A, OP_COERCE_S, OP_INITPROPERTY, OP_GETLOCAL,
+    OP_SETLOCAL, OP_GETLOCAL_1, OP_GETLOCAL_2, OP_GETLOCAL_3,
+    OP_SETLOCAL_0, OP_SETLOCAL_1, OP_SETLOCAL_2, OP_SETLOCAL_3,
+    OP_NEWFUNCTION, OP_CALL, OP_CONSTRUCT,
+    OP_JUMP, OP_IFTRUE, OP_IFFALSE,
+    OP_ADD, OP_SUBTRACT, OP_MULTIPLY, OP_DIVIDE,
+    OP_EQUALS, OP_STRICTEQUALS, OP_LESSTHAN, OP_GREATEREQUALS,
+    OP_NOT, OP_NOP, OP_LABEL, OP_THROW, OP_DEBUGFILE, OP_DEBUGLINE,
 )
 
 
@@ -544,16 +546,16 @@ class AbcBuilder:
         if constructor is None:
             constructor = self.method()
             self.method_body(constructor, code=bytes([
-                OP_getlocal_0, OP_pushscope,
-                OP_getlocal_0, OP_constructsuper, 0x00,  # 0 args
-                OP_returnvoid,
+                OP_GETLOCAL_0, OP_PUSHSCOPE,
+                OP_GETLOCAL_0, OP_CONSTRUCTSUPER, 0x00,  # 0 args
+                OP_RETURNVOID,
             ]), max_stack=1, local_count=1,
                 init_scope_depth=0, max_scope_depth=1)
 
         # Auto-create static init if not provided
         if static_init is None:
             static_init = self.method()
-            self.method_body(static_init, code=bytes([OP_returnvoid]),
+            self.method_body(static_init, code=bytes([OP_RETURNVOID]),
                              max_stack=0, local_count=1,
                              init_scope_depth=0, max_scope_depth=1)
 
@@ -599,7 +601,7 @@ class AbcBuilder:
         """
         if init is None:
             init = self.method()
-            self.method_body(init, code=bytes([OP_returnvoid]),
+            self.method_body(init, code=bytes([OP_RETURNVOID]),
                              max_stack=0, local_count=1)
 
         si = ScriptInfo(init=init, traits=traits or [])
@@ -623,165 +625,165 @@ class AbcBuilder:
 
     # Simple opcodes (no operands)
     @staticmethod
-    def op_nop() -> bytes: return bytes([OP_nop])
+    def op_nop() -> bytes: return bytes([OP_NOP])
     @staticmethod
-    def op_label() -> bytes: return bytes([OP_label])
+    def op_label() -> bytes: return bytes([OP_LABEL])
     @staticmethod
-    def op_throw() -> bytes: return bytes([OP_throw])
+    def op_throw() -> bytes: return bytes([OP_THROW])
     @staticmethod
-    def op_getlocal_0() -> bytes: return bytes([OP_getlocal_0])
+    def op_getlocal_0() -> bytes: return bytes([OP_GETLOCAL_0])
     @staticmethod
-    def op_getlocal_1() -> bytes: return bytes([OP_getlocal_1])
+    def op_getlocal_1() -> bytes: return bytes([OP_GETLOCAL_1])
     @staticmethod
-    def op_getlocal_2() -> bytes: return bytes([OP_getlocal_2])
+    def op_getlocal_2() -> bytes: return bytes([OP_GETLOCAL_2])
     @staticmethod
-    def op_getlocal_3() -> bytes: return bytes([OP_getlocal_3])
+    def op_getlocal_3() -> bytes: return bytes([OP_GETLOCAL_3])
     @staticmethod
-    def op_setlocal_0() -> bytes: return bytes([OP_setlocal_0])
+    def op_setlocal_0() -> bytes: return bytes([OP_SETLOCAL_0])
     @staticmethod
-    def op_setlocal_1() -> bytes: return bytes([OP_setlocal_1])
+    def op_setlocal_1() -> bytes: return bytes([OP_SETLOCAL_1])
     @staticmethod
-    def op_setlocal_2() -> bytes: return bytes([OP_setlocal_2])
+    def op_setlocal_2() -> bytes: return bytes([OP_SETLOCAL_2])
     @staticmethod
-    def op_setlocal_3() -> bytes: return bytes([OP_setlocal_3])
+    def op_setlocal_3() -> bytes: return bytes([OP_SETLOCAL_3])
     @staticmethod
-    def op_pushscope() -> bytes: return bytes([OP_pushscope])
+    def op_pushscope() -> bytes: return bytes([OP_PUSHSCOPE])
     @staticmethod
-    def op_returnvoid() -> bytes: return bytes([OP_returnvoid])
+    def op_returnvoid() -> bytes: return bytes([OP_RETURNVOID])
     @staticmethod
-    def op_returnvalue() -> bytes: return bytes([OP_returnvalue])
+    def op_returnvalue() -> bytes: return bytes([OP_RETURNVALUE])
     @staticmethod
-    def op_pop() -> bytes: return bytes([OP_pop])
+    def op_pop() -> bytes: return bytes([OP_POP])
     @staticmethod
-    def op_dup() -> bytes: return bytes([OP_dup])
+    def op_dup() -> bytes: return bytes([OP_DUP])
     @staticmethod
-    def op_swap() -> bytes: return bytes([OP_swap])
+    def op_swap() -> bytes: return bytes([OP_SWAP])
     @staticmethod
-    def op_pushnull() -> bytes: return bytes([OP_pushnull])
+    def op_pushnull() -> bytes: return bytes([OP_PUSHNULL])
     @staticmethod
-    def op_pushundefined() -> bytes: return bytes([OP_pushundefined])
+    def op_pushundefined() -> bytes: return bytes([OP_PUSHUNDEFINED])
     @staticmethod
-    def op_pushtrue() -> bytes: return bytes([OP_pushtrue])
+    def op_pushtrue() -> bytes: return bytes([OP_PUSHTRUE])
     @staticmethod
-    def op_pushfalse() -> bytes: return bytes([OP_pushfalse])
+    def op_pushfalse() -> bytes: return bytes([OP_PUSHFALSE])
     @staticmethod
-    def op_convert_i() -> bytes: return bytes([OP_convert_i])
+    def op_convert_i() -> bytes: return bytes([OP_CONVERT_I])
     @staticmethod
-    def op_convert_s() -> bytes: return bytes([OP_convert_s])
+    def op_convert_s() -> bytes: return bytes([OP_CONVERT_S])
     @staticmethod
-    def op_convert_d() -> bytes: return bytes([OP_convert_d])
+    def op_convert_d() -> bytes: return bytes([OP_CONVERT_D])
     @staticmethod
-    def op_coerce_a() -> bytes: return bytes([OP_coerce_a])
+    def op_coerce_a() -> bytes: return bytes([OP_COERCE_A])
     @staticmethod
-    def op_coerce_s() -> bytes: return bytes([OP_coerce_s])
+    def op_coerce_s() -> bytes: return bytes([OP_COERCE_S])
     @staticmethod
-    def op_add() -> bytes: return bytes([OP_add])
+    def op_add() -> bytes: return bytes([OP_ADD])
     @staticmethod
-    def op_subtract() -> bytes: return bytes([OP_subtract])
+    def op_subtract() -> bytes: return bytes([OP_SUBTRACT])
     @staticmethod
-    def op_multiply() -> bytes: return bytes([OP_multiply])
+    def op_multiply() -> bytes: return bytes([OP_MULTIPLY])
     @staticmethod
-    def op_divide() -> bytes: return bytes([OP_divide])
+    def op_divide() -> bytes: return bytes([OP_DIVIDE])
     @staticmethod
-    def op_equals() -> bytes: return bytes([OP_equals])
+    def op_equals() -> bytes: return bytes([OP_EQUALS])
     @staticmethod
-    def op_strictequals() -> bytes: return bytes([OP_strictequals])
+    def op_strictequals() -> bytes: return bytes([OP_STRICTEQUALS])
     @staticmethod
-    def op_lessthan() -> bytes: return bytes([OP_lessthan])
+    def op_lessthan() -> bytes: return bytes([OP_LESSTHAN])
     @staticmethod
-    def op_greaterequals() -> bytes: return bytes([OP_greaterequals])
+    def op_greaterequals() -> bytes: return bytes([OP_GREATEREQUALS])
     @staticmethod
-    def op_not() -> bytes: return bytes([OP_not])
+    def op_not() -> bytes: return bytes([OP_NOT])
 
     # Opcodes with u30 operand
     @staticmethod
     def op_getlocal(reg: int) -> bytes:
-        return bytes([OP_getlocal]) + write_u30(reg)
+        return bytes([OP_GETLOCAL]) + write_u30(reg)
     @staticmethod
     def op_setlocal(reg: int) -> bytes:
-        return bytes([OP_setlocal]) + write_u30(reg)
+        return bytes([OP_SETLOCAL]) + write_u30(reg)
     @staticmethod
     def op_pushbyte(val: int) -> bytes:
-        return bytes([OP_pushbyte, val & 0xFF])
+        return bytes([OP_PUSHBYTE, val & 0xFF])
     @staticmethod
     def op_pushshort(val: int) -> bytes:
-        return bytes([OP_pushshort]) + write_u30(val)
+        return bytes([OP_PUSHSHORT]) + write_u30(val)
     @staticmethod
     def op_pushstring(index: int) -> bytes:
-        return bytes([OP_pushstring]) + write_u30(index)
+        return bytes([OP_PUSHSTRING]) + write_u30(index)
     @staticmethod
     def op_pushint(index: int) -> bytes:
-        return bytes([OP_pushint]) + write_u30(index)
+        return bytes([OP_PUSHINT]) + write_u30(index)
     @staticmethod
     def op_pushuint(index: int) -> bytes:
-        return bytes([OP_pushuint]) + write_u30(index)
+        return bytes([OP_PUSHUINT]) + write_u30(index)
     @staticmethod
     def op_pushdouble(index: int) -> bytes:
-        return bytes([OP_pushdouble]) + write_u30(index)
+        return bytes([OP_PUSHDOUBLE]) + write_u30(index)
     @staticmethod
     def op_getproperty(index: int) -> bytes:
-        return bytes([OP_getproperty]) + write_u30(index)
+        return bytes([OP_GETPROPERTY]) + write_u30(index)
     @staticmethod
     def op_setproperty(index: int) -> bytes:
-        return bytes([OP_setproperty]) + write_u30(index)
+        return bytes([OP_SETPROPERTY]) + write_u30(index)
     @staticmethod
     def op_initproperty(index: int) -> bytes:
-        return bytes([OP_initproperty]) + write_u30(index)
+        return bytes([OP_INITPROPERTY]) + write_u30(index)
     @staticmethod
     def op_getlex(index: int) -> bytes:
-        return bytes([OP_getlex]) + write_u30(index)
+        return bytes([OP_GETLEX]) + write_u30(index)
     @staticmethod
     def op_findpropstrict(index: int) -> bytes:
-        return bytes([OP_findpropstrict]) + write_u30(index)
+        return bytes([OP_FINDPROPSTRICT]) + write_u30(index)
     @staticmethod
     def op_coerce(index: int) -> bytes:
-        return bytes([OP_coerce]) + write_u30(index)
+        return bytes([OP_COERCE]) + write_u30(index)
     @staticmethod
     def op_constructsuper(arg_count: int) -> bytes:
-        return bytes([OP_constructsuper]) + write_u30(arg_count)
+        return bytes([OP_CONSTRUCTSUPER]) + write_u30(arg_count)
     @staticmethod
     def op_newarray(arg_count: int) -> bytes:
-        return bytes([OP_newarray]) + write_u30(arg_count)
+        return bytes([OP_NEWARRAY]) + write_u30(arg_count)
     @staticmethod
     def op_newclass(class_index: int) -> bytes:
-        return bytes([OP_newclass]) + write_u30(class_index)
+        return bytes([OP_NEWCLASS]) + write_u30(class_index)
     @staticmethod
     def op_newfunction(method_index: int) -> bytes:
-        return bytes([OP_newfunction]) + write_u30(method_index)
+        return bytes([OP_NEWFUNCTION]) + write_u30(method_index)
     @staticmethod
     def op_call(arg_count: int) -> bytes:
-        return bytes([OP_call]) + write_u30(arg_count)
+        return bytes([OP_CALL]) + write_u30(arg_count)
     @staticmethod
     def op_construct(arg_count: int) -> bytes:
-        return bytes([OP_construct]) + write_u30(arg_count)
+        return bytes([OP_CONSTRUCT]) + write_u30(arg_count)
     @staticmethod
     def op_debugfile(index: int) -> bytes:
-        return bytes([OP_debugfile]) + write_u30(index)
+        return bytes([OP_DEBUGFILE]) + write_u30(index)
     @staticmethod
     def op_debugline(line: int) -> bytes:
-        return bytes([OP_debugline]) + write_u30(line)
+        return bytes([OP_DEBUGLINE]) + write_u30(line)
 
     # Opcodes with u30 u30 operands
     @staticmethod
     def op_callproperty(index: int, arg_count: int) -> bytes:
-        return bytes([OP_callproperty]) + write_u30(index) + write_u30(arg_count)
+        return bytes([OP_CALLPROPERTY]) + write_u30(index) + write_u30(arg_count)
     @staticmethod
     def op_callpropvoid(index: int, arg_count: int) -> bytes:
-        return bytes([OP_callpropvoid]) + write_u30(index) + write_u30(arg_count)
+        return bytes([OP_CALLPROPVOID]) + write_u30(index) + write_u30(arg_count)
     @staticmethod
     def op_constructprop(index: int, arg_count: int) -> bytes:
-        return bytes([OP_constructprop]) + write_u30(index) + write_u30(arg_count)
+        return bytes([OP_CONSTRUCTPROP]) + write_u30(index) + write_u30(arg_count)
 
     # Branch opcodes (s24 operand)
     @staticmethod
     def op_jump(offset: int) -> bytes:
-        return bytes([OP_jump]) + _encode_s24(offset)
+        return bytes([OP_JUMP]) + _encode_s24(offset)
     @staticmethod
     def op_iftrue(offset: int) -> bytes:
-        return bytes([OP_iftrue]) + _encode_s24(offset)
+        return bytes([OP_IFTRUE]) + _encode_s24(offset)
     @staticmethod
     def op_iffalse(offset: int) -> bytes:
-        return bytes([OP_iffalse]) + _encode_s24(offset)
+        return bytes([OP_IFFALSE]) + _encode_s24(offset)
 
     # ── Convenience ────────────────────────────────────────────────────
 

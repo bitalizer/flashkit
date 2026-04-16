@@ -453,6 +453,21 @@ def _append_unique(xs: list, x) -> None:
         xs.append(x)
 
 
+def _looks_like_type_name(name: str) -> bool:
+    """Heuristic: does ``name`` look like a type identifier, not a property/method?
+
+    Real AS3 types start uppercase (``Sprite``). But production SWFs frequently
+    obfuscate type names to ``_-Sg``, ``_-tp``, ``_-R3`` style, so leading
+    underscores also qualify. Everything else (camelCase properties, snake_case
+    locals) is rejected so method/property multinames don't pollute the
+    wildcard import list.
+    """
+    if not name:
+        return False
+    first = name[0]
+    return first.isupper() or first == "_"
+
+
 def collect_mn_package_namespaces(
     abc: AbcFile,
     mn_idx: int,
@@ -503,7 +518,7 @@ def collect_mn_package_namespaces_typed(
 
     if mn.kind in (CONSTANT_MULTINAME, CONSTANT_MULTINAME_A):
         name = abc.string(mn.name)
-        if not name or not name[0].isupper():
+        if not name or not _looks_like_type_name(name):
             return  # Skip non-class names.
         ns_set_idx = mn.ns_set
     elif mn.kind in (CONSTANT_MULTINAME_L, CONSTANT_MULTINAME_LA):
@@ -542,7 +557,7 @@ def _collect_typename_param(
 
     if mn.kind in (CONSTANT_QNAME, CONSTANT_QNAME_A):
         name = abc.string(mn.name)
-        if name and name[0].isupper():
+        if name and _looks_like_type_name(name):
             if abc.namespace_kind(mn.ns) == CONSTANT_PACKAGE_NAMESPACE:
                 ns_name = abc.namespace_name(mn.ns)
                 if ns_name:

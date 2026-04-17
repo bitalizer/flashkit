@@ -24,7 +24,9 @@ from ..abc.constants import (
     TRAIT_CLASS, TRAIT_FUNCTION,
     CONSTANT_QNAME, CONSTANT_QNAME_A,
     CONSTANT_RTQNAME, CONSTANT_RTQNAME_A,
+    CONSTANT_RTQNAME_L, CONSTANT_RTQNAME_LA,
     CONSTANT_MULTINAME, CONSTANT_MULTINAME_A,
+    CONSTANT_MULTINAME_L, CONSTANT_MULTINAME_LA,
     CONSTANT_TYPENAME,
     ATTR_METADATA,
 )
@@ -68,6 +70,12 @@ def resolve_multiname(abc: AbcFile, index: int) -> str:
                 params.append(resolve_multiname(abc, param_idx))
             return f"{base}.<{', '.join(params)}>"
         return base
+    elif mn.kind in (CONSTANT_RTQNAME_L, CONSTANT_RTQNAME_LA,
+                     CONSTANT_MULTINAME_L, CONSTANT_MULTINAME_LA):
+        # Late-bound: the name (and for *_L also the namespace) come
+        # from the runtime stack — there's nothing in the pool to
+        # resolve. "*" is the AVM2 wildcard / any-name convention.
+        return "*"
     return f"multiname[{index}]"
 
 

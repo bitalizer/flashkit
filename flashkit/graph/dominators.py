@@ -24,7 +24,7 @@ from __future__ import annotations
 from .cfg import CFG, BasicBlock
 
 
-def _reverse_postorder(entry: BasicBlock, blocks: list[BasicBlock]) -> list[int]:
+def reverse_postorder(entry: BasicBlock, blocks: list[BasicBlock]) -> list[int]:
     """Return block indices in reverse postorder starting from ``entry``.
 
     Only reachable blocks are included. Uses an explicit stack so deep
@@ -48,6 +48,10 @@ def _reverse_postorder(entry: BasicBlock, blocks: list[BasicBlock]) -> list[int]
             stack.pop()
     post.reverse()
     return post
+
+
+# Backwards-compatible alias for in-module callers that pre-date the rename.
+_reverse_postorder = reverse_postorder
 
 
 def _compute_idom_generic(

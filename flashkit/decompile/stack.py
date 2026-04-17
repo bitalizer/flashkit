@@ -175,16 +175,25 @@ class BlockStackSim:
         self.param_count = param_count
         self.local0_name = local0_name
 
-    def run(self, bb) -> BlockSimResult:
+    def run(self, bb, entry_stack: list[Expression] | None = None) -> BlockSimResult:
         """Simulate one basic block.
 
         Args:
             bb: A ``BasicBlock`` whose ``instructions`` will be walked.
+            entry_stack: Optional abstract expression stack on entry.
+                When supplied, operands missing from the block's own
+                pushes can be satisfied from incoming predecessors'
+                exit stacks — this is what keeps cross-block
+                conditionals (``iftrue`` whose operand was pushed in
+                the fall-through predecessor) from falling back to
+                ``Identifier("_unknown")``. ``None`` means "start
+                empty"; the driver in ``method.py`` populates it from
+                the forward dataflow pass.
 
         Returns:
             A ``BlockSimResult``.
         """
-        stack: list[Expression] = []
+        stack: list[Expression] = list(entry_stack) if entry_stack else []
         statements: list[Statement] = []
         result = BlockSimResult(statements=statements, stack=stack)
 

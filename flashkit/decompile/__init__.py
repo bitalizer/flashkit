@@ -190,9 +190,21 @@ def decompile_method(
         # Wrap body with function signature derived from MethodInfo.
         m = view.methods[method_idx]
         ret = view.type_name(m.return_type)
+        # Prefer real parameter names from the MethodInfo debug table
+        # (set when the METHOD_HAS_PARAM_NAMES flag is present); fall
+        # back to the AVM2 ``_arg_N`` convention only when the slot
+        # is missing or resolves to an empty string.
+        raw_abc = getattr(view, "_abc", view)
+        raw_names: list[str] = []
+        for pn in (getattr(m, "param_names", None) or []):
+            if 0 < pn < len(raw_abc.string_pool):
+                raw_names.append(raw_abc.string_pool[pn])
+            else:
+                raw_names.append("")
         param_parts: list[str] = []
         for i, pt in enumerate(m.param_types):
-            param_parts.append(f"_arg_{i + 1}:{view.type_name(pt)}")
+            label = raw_names[i] if i < len(raw_names) and raw_names[i] else f"_arg_{i + 1}"
+            param_parts.append(f"{label}:{view.type_name(pt)}")
         sig = f"function {name or 'method_' + str(method_idx)}({', '.join(param_parts)}):{ret}"
         return f"{sig}\n{body}"
     return body

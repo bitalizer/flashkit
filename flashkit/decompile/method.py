@@ -24,12 +24,13 @@ import logging
 from typing import TYPE_CHECKING, Union
 
 from ..abc.disasm import decode_instructions
-from ..graph.cfg import build_cfg_from_bytecode
-from ..graph.dominators import compute_idom, compute_ipostdom
+from ..graph.cfg import CFG, build_cfg_from_bytecode
+from ..graph.dominators import compute_idom, compute_ipostdom, reverse_postorder
 from ..graph.loops import find_loops
+from .ast.nodes import Expression, Identifier
 from .ast.printer import AstPrinter
 from .patterns import apply_patterns
-from .stack import BlockStackSim
+from .stack import BlockSimResult, BlockStackSim
 from .structure import structure_method
 
 if TYPE_CHECKING:
@@ -104,7 +105,7 @@ class MethodDecompiler:
                 local0_name=(class_name if (is_static and class_name)
                              else "this"),
             )
-            block_results = {bb.index: sim.run(bb) for bb in cfg.blocks}
+            block_results = _simulate_all_blocks(cfg, sim)
 
             root = structure_method(cfg, idom, ipostdom, loops, block_results)
             root = apply_patterns(root)
@@ -141,6 +142,117 @@ class MethodDecompiler:
             return 0
         m = methods[method_idx]
         return int(getattr(m, "param_count", 0) or 0)
+
+
+# ── cross-block stack dataflow ────────────────────────────────────────────
+
+
+def _simulate_all_blocks(
+    cfg: CFG,
+    sim: BlockStackSim,
+) -> dict[int, BlockSimResult]:
+    """Run the stack simulator on every block in forward dataflow order.
+
+    Each block's entry stack is the *meet* of its predecessors' exit
+    stacks. This is what lets a conditional like ``iftrue`` find its
+    operand on the stack when the value was pushed in a predecessor
+    block (the common ``getlex``-then-``iftrue`` split across the
+    fall-through edge). Without this pass the stack simulator starts
+    every block with an empty stack and falls back to
+    ``Identifier("_unknown")`` for the missing operand.
+
+    Algorithm:
+
+    * Iterate reverse-postorder so predecessors are processed before
+      successors on all forward edges. Loop back-edges are the only
+      place where a successor can be visited before one of its
+      predecessors.
+    * Start unvisited predecessor contributions as ``None`` (bottom).
+      The meet ignores ``None`` contributors, so a loop header on its
+      first pass sees only the forward-edge predecessor.
+    * After one RPO pass, repeat until the set of block-exit stacks
+      stops changing. In practice reducible CFGs converge in one or
+      two passes; a small iteration cap guards pathological cases.
+    """
+    order = reverse_postorder(cfg.entry, cfg.blocks)
+    exit_stacks: dict[int, list[Expression] | None] = {
+        bb.index: None for bb in cfg.blocks
+    }
+    results: dict[int, BlockSimResult] = {}
+
+    # Bound the worklist; each extra pass only helps irreducible CFGs
+    # and loop back-edges that change an operand shape. Anything beyond
+    # a handful of passes means the fixpoint isn't actually stable —
+    # bail out and keep whatever we have.
+    for _ in range(8):
+        changed = False
+        for idx in order:
+            bb = cfg.blocks[idx]  # blocks are indexed by position
+            entry = _meet_predecessors(bb, exit_stacks)
+            res = sim.run(bb, entry_stack=entry)
+            if exit_stacks[idx] != res.stack:
+                exit_stacks[idx] = list(res.stack)
+                changed = True
+            results[idx] = res
+        if not changed:
+            break
+
+    # Unreachable blocks (not in RPO) still need a result entry for the
+    # structurer. They never execute, so an empty entry stack is fine.
+    for bb in cfg.blocks:
+        if bb.index not in results:
+            results[bb.index] = sim.run(bb)
+
+    return results
+
+
+def _meet_predecessors(
+    bb,
+    exit_stacks: dict[int, list[Expression] | None],
+) -> list[Expression]:
+    """Merge predecessor exit stacks into a single entry stack.
+
+    AVM2 is verified to have matching stack heights at every merge
+    point, so we take the shortest non-``None`` predecessor height as
+    ground truth. Slot-by-slot: if every contributing predecessor
+    agrees on the AST value, keep it; otherwise emit a synthetic name
+    so the value is still a real expression (``_s{depth}_b{block}``)
+    and not ``_unknown``. The printer renders it as a plain identifier
+    which is at least reconstructible from context.
+    """
+    contribs = [
+        exit_stacks[p.index] for p in bb.predecessors
+        if exit_stacks[p.index] is not None
+    ]
+    if not contribs:
+        return []
+
+    min_depth = min(len(s) for s in contribs)
+    merged: list[Expression] = []
+    for depth in range(min_depth):
+        values = [s[depth] for s in contribs]
+        first = values[0]
+        if all(_ast_equal(v, first) for v in values[1:]):
+            merged.append(first)
+        else:
+            merged.append(Identifier(f"_s{depth}_b{bb.index}"))
+    return merged
+
+
+def _ast_equal(a: Expression, b: Expression) -> bool:
+    """Structural equality on AST nodes.
+
+    Dataclass ``__eq__`` covers field-by-field comparison; we guard on
+    type first so unrelated subclasses don't try to compare across each
+    other. Any exception from non-dataclass nodes falls back to
+    identity — the safe answer ("not equal") for the meet.
+    """
+    if type(a) is not type(b):
+        return False
+    try:
+        return a == b
+    except Exception:  # noqa: BLE001
+        return a is b
 
 
 # ── output shaping ─────────────────────────────────────────────────────────

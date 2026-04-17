@@ -174,19 +174,19 @@ class _ScriptView:
 
 
 class _ExceptionView:
-    """View of ExceptionInfo. Source names offsets ``from_pos``/``to_pos``;
-    flashkit uses ``from_offset``/``to_offset``."""
+    """Forwarding view of ExceptionInfo — exposes the same offset names
+    downstream code (``graph.cfg``, ``decompile.structure``) reads."""
     __slots__ = ("_e",)
 
     def __init__(self, e: ExceptionInfo) -> None:
         self._e = e
 
     @property
-    def from_pos(self) -> int:
+    def from_offset(self) -> int:
         return self._e.from_offset
 
     @property
-    def to_pos(self) -> int:
+    def to_offset(self) -> int:
         return self._e.to_offset
 
     @property
